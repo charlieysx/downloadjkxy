@@ -188,20 +188,21 @@ class Crawler:
 
 		# 最多开4个线程
 		moreThread = 4
-		p = 1
-		while p <= page:
+		p = 0
+		while p <= 0:
 			# len = threading.activeCount()
 			# if(len == moreThread):
 			# 	continue
 			if len(threads) == moreThread:
 				continue
-			thread = CourseUrlsThread(startUrl + str(p), workQueue, p)
+			# thread = CourseUrlsThread(startUrl + str(p), workQueue, p)
+			thread = CourseUrlsThread(startUrl, workQueue, p)
 			thread.start()
 			threads.append(thread)
 			p += 1
 
 	# 视频下载方法
-	def download(self, courseUrl):
+	def download(self, courseUrl, n):
 		# 获取课程名称
 		request = urllib.request.Request(courseUrl)
 		# 给一个useragent
@@ -209,14 +210,16 @@ class Crawler:
 		request = urllib.request.urlopen(request)
 		coursePageHtml = request.read().decode('utf-8')
 		request.close()
-		courseName = re.search(r'(?s)<title>(.*?)-', coursePageHtml).group(1)
+		courseName = re.search(r'(?s)<title>(.*?)((-极客学院)|<)', coursePageHtml).group(1)
+		# courseName = re.search(r'(?s)<title>(.*?)-', coursePageHtml).group(1)
 
 		courseName = FormatChar().Analysis_str(courseName)
 
 		# 课程数量
 		courseCount = int(re.search(r'(?s)class="timebox"><span>(.*?)课时',coursePageHtml).group(1))
 		# 存储视频的文件夹路径
-		__folderPath = self.__folderPath + courseName + '/'
+		__folderPath = self.__folderPath + str(n) + courseName + '/'
+		# __folderPath = self.__folderPath + courseName + '/'
 		# 判断文件夹是否存在
 		folderExists = os.path.exists(__folderPath)
 		if not folderExists:
@@ -247,7 +250,8 @@ class Crawler:
 			pageHtml = pageHtml.decode('utf-8')
 
 			# 本节课程的名称
-			name = re.search(r'(?s)<title>(.*?)-',pageHtml).group(1)
+			name = re.search(r'(?s)<title>(.*?)((-极客学院)|<)',pageHtml).group(1)
+			# name = re.search(r'(?s)<title>(.*?)-',pageHtml).group(1)
 			name = FormatChar().Analysis_str(name)
 
 			if os.path.isfile(__folderPath + str(i) + name + '.mp4'):
@@ -266,9 +270,15 @@ class Crawler:
 			
 			str1 = '正在下载视频' + str(i) + ' : ' + name
 			self.printstr (str1)
-
-			# 存储视频的Path: 总路径/课程名/每一节的名称
-			urllib.request.urlretrieve(videoUrl, __folderPath + str(i) + name + '.mp4', self.reporthook)
+			try:
+				# 存储视频的Path: 总路径/课程名/每一节的名称
+				urllib.request.urlretrieve(videoUrl, __folderPath + str(i) + name + '.mp4', self.reporthook)
+			except urllib.error.ContentTooShortError:
+				print('')
+				print('视频下载失败，地址为：' + videoUrl)
+			except:
+				print('')
+				print('视频下载失败，地址为：' + videoUrl)
 		# print ('下载完成')
 
 	# 回调函数，显示下载进度
@@ -310,14 +320,15 @@ workQueue = queue.Queue(1000)
 
 if __name__ == "__main__":
 	# print(threading.activeCount())
-	# 注：改爬虫下载需要有会员的用户
-	crawler = Crawler('用户名', '密码', '保存下载后的视频的地址')
+	crawler = Crawler('用户名', '密码', 'G:/资料/极客学院/HTML5开发开发知识体系图/')
 	result = crawler.login()
 	if re.search('登录成功', result) != None:
 		print('登录成功...')
 
 		# 第二个参数为多少个页面
-		crawler.getCourseUrls('http://www.jikexueyuan.com/course/android/?pageNum=', 11)
+		# crawler.getCourseUrls('http://www.jikexueyuan.com/course/java/?pageNum=', 5)
+		# crawler.getCourseUrls('http://www.jikexueyuan.com/course/android/?pageNum=', 11)
+		crawler.getCourseUrls('http://www.jikexueyuan.com/path/html5/', 1)
 
 		# 等待所有线程完成，即所有课程网址获取结束
 		for t in threads:
@@ -326,9 +337,14 @@ if __name__ == "__main__":
 		print('----------' + str(workQueue.qsize()) + '个课程----------')
 		n = 1
 		while not workQueue.empty():
-			print('下载第%d个课程---' % n, end='')
 			n += 1
-			crawler.download(workQueue.get())
+			url = workQueue.get()
+			if n <= 92:
+				continue
+
+			print('下载第%d个课程---' % (n - 1), end='')
+			
+			crawler.download(url, n - 1)
 			time.sleep(1)
 
 	else:
