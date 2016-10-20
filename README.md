@@ -14,6 +14,10 @@
  * 登录：result = crawler.login()
  * 获取要下载的页面中的课程网址：crawler.getCourseUrls('http://www.jikexueyuan.com/course/android/?pageNum=', 11)后面的11是有11个页面的意思
  * 下载视频：crawler.download(workQueue.get())
+
+
+* ###注意
+ * 使用的是python3
  
 大概方法就是这样，详细看代码。
 
